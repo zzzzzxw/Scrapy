@@ -8,8 +8,8 @@ from housedata.items import HousedataItem
 
 class DataspiderSpider(scrapy.Spider):
     name = 'dataSpider'
-    allowed_domains = ['cq.lianjia.com']
-    start_urls = ['https://cq.fang.lianjia.com/loupan/']
+    allowed_domains = ['cd.lianjia.com']
+    start_urls = ['https://cd.fang.lianjia.com/loupan/']
 
     def parse(self, response):
         total = response.xpath('//div[@class="page-box"]/@data-total-count').extract_first()
