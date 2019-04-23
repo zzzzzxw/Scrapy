@@ -118,7 +118,4 @@ ITEM_PIPELINES = {
 SCHEDULER = "scrapy_redis.scheduler.Scheduler"
 
 DUPEFILTER_CLASS = "scrapy_redis.dupefilter.RFPDupeFilter"
-
-#REDIS_HOST = '138.68.239.129'
-#REDIS_PORT = 6379
-REDIS_URL = 'redis://138.68.239.129:6379'
+REDIS_URL = 'redis://your redis'IP:6379'
