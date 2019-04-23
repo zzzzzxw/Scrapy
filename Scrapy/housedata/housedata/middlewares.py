@@ -65,7 +65,7 @@ class ProxyMiddleware(object):
     '''
 
     def process_request(self, request, spider):
-        proxy = requests.get("http://138.68.239.129:5010/get/").text
+        proxy = requests.get("http://127.0.0.1:5010/get/").text
         request.meta['proxy'] = "http://{}".format(proxy)
 
         print("**************ProxyMiddleware no pass************" + proxy)
