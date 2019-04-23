@@ -14,7 +14,7 @@ BOT_NAME = 'mzitu'
 
 SPIDER_MODULES = ['mzitu.spiders']
 NEWSPIDER_MODULE = 'mzitu.spiders'
-MONGO_URI = {'120.79.55.50': 27017}
+MONGO_URI = {'localhost': 27017}
 MONGO_DB = 'testdb'
 
 UserAgent_List = [
@@ -128,9 +128,5 @@ ITEM_PIPELINES = {
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
 SCHEDULER = "scrapy_redis.scheduler.Scheduler"
-
 DUPEFILTER_CLASS = "scrapy_redis.dupefilter.RFPDupeFilter"
-
-#REDIS_HOST = '138.68.239.129'
-#REDIS_PORT = 6379
-REDIS_URL = 'redis://138.68.239.129:6379'
+REDIS_URL = 'redis://yourredisIp:6379'
