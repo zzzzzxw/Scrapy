@@ -2,6 +2,7 @@
 Version: Python3.6
 Author: Zzz
 Time: 2019/4/23
+下载数据库的图片到本地
 """
 import asyncio
 import datetime
@@ -41,9 +42,9 @@ header = {"UserAgent": random.choice(UserAgent_List),
           }
 file_path = r'G:\photo\scrapy'  #图片保存本地路径
 MONGODB_SEVER = {'localhost': 27017}
-client = pymongo.MongoClient('120.79.55.50', 27017)
-db = client.testdb
-col = db.MzituItem
+client = pymongo.MongoClient(MONGODB_SEVER) #你的图片存储mongodb地址和端口
+db = client.testdb  #数据库名称
+col = db.MzituItem  #collection名称
 
 
 def str_del(string):
@@ -84,7 +85,7 @@ async def save_pic(result):
         print(img_title)
     await session.close()
 
-
+#查重
 def deletDouble(s):
     l = len(s)
     delist = []
@@ -97,18 +98,6 @@ def deletDouble(s):
 
     return delist
 
-
-async def get_col():
-    async with Pool() as pool:
-        i = col.find({})[150:180]
-        result = await pool.map(save_pic, i)
-        return result
-
-
-def get_proxy():
-    proxy = requests.get("http://127.0.0.1:5010/get/").text
-    proxies = dict(http="{}".format(proxy), https="https://{}".format(proxy))
-    return proxies
 
 
 def save_pic1(result):
@@ -143,6 +132,7 @@ def main():
     '''
     #线程池的方式保存图片，经测试在线程数为10的时候下载会比较稳定但是速度比协程要慢
     #协程同时传入的任务数当大于10的时候会出现少量请求图片的错误，当大于500的时候协程内部报错select
+    #下面为线程池的方式，可自行修改
     executor = ThreadPoolExecutor(max_workers=10)
     i= col.find({})[425:435]
     executor.map(save_pic1, i)
@@ -167,5 +157,4 @@ def main():
     loop.close()
 if __name__ == '__main__':
     main()
-
     client.close()
