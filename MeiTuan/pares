@@ -1,0 +1,116 @@
+# -*-coding: utf-8 -*-
+# !/usr/bin/env python3.6
+"""
+__time__   = '2019/5/27 21:05'
+__file__ = pares.py
+__author__ = 'Zzz'
+"""
+import re
+import time
+
+import pymongo
+import pymysql
+import pandas as pd
+import requests
+from sqlalchemy import create_engine
+
+proxies1 = {'http': 'http://proxyIp:port',
+            'https': 'https://proxyIp:port'}
+
+
+class Pares(object):
+    def __init__(self, jsonDatas):
+        # self.con = pymysql.connect(host="localhost", port=3306, user="root", password="", charset='utf8',
+        #                           db='mtdata')
+        # engine = create_engine('mysql+pymysql://username:password@localhost:3306/mtdata')
+        # self.connect= engine.connect()
+        self.mongo_uri = pymongo.MongoClient({'localhost': 27017})
+        self.db = self.mongo_uri['mtdata']
+        self.col = self.db['cqdata']
+        self.jsonDatas = jsonDatas
+
+    def pares_json(self):
+        header = {
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Encoding': 'gzip, deflate',
+            'Host': 'meishi.meituan.com',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.75 Safari/537.36',
+            'Accept-Language': 'zh-CN,zh;q=0.9',
+            'Cookie': '__mta=217480489.1557912295888.1558603628433.1559042484656.10; __mta=151753990.1557912363250.1558086544803.1558099818177.22; _lxsdk_cuid=16a6d0a91f4c8-0bb7a7e6cf4c33-7a1b34-1fa400-16a6d0a91f4c8; iuuid=22C823AF920B98A6731899F34E4A09E176C7BEF27B4DA8E0E9CE68AA8CE4068B; _lxsdk=22C823AF920B98A6731899F34E4A09E176C7BEF27B4DA8E0E9CE68AA8CE4068B; _hc.v=e01b9012-0638-a72a-24ef-520f55263d54.1557909552; __utmz=74597006.1558102696.13.5.utmcsr=google|utmccn=(organic)|utmcmd=organic|utmctr=(not%20provided); __utma=74597006.430058307.1557909451.1558165332.1558598539.15; latlng=29.419889,106.313393,1558598538615; cityname=%E9%87%8D%E5%BA%86; i_extend=C_b1Gimthomepagecategory11H__a; _lx_utm=utm_source%3Dgoogle%26utm_medium%3Dorganic; ci=45; rvct=45%2C59; uuid=0ff1f93143524857bf75.1559042439.1.0.0; lat=29.57007; lng=106.548502; client-id=a6c914c9-650b-4038-bec2-7170702b176f; logan_session_token=u95bc3gjbavxqyfegukl; logan_custom_report=; _lxsdk_s=16afe2bb64b-e03-7bf-ff0%7C%7C9',
+            'Upgrade-Insecure-Requests': '1'
+
+        }
+        for jd in self.jsonDatas:
+            storeData = {}
+            storeData['poiId'] = jd['poiId']
+            storeData['frontImg'] = jd['frontImg']
+            storeData['title'] = jd['title']
+            storeData['avgScore'] = jd['avgScore']
+            storeData['allCommentNum'] = jd['allCommentNum']
+            storeData['address'] = jd['address']
+            storeData['avgPrice'] = jd['avgPrice']
+            storeUrl = 'http://meishi.meituan.com/i/poi/{}'.format(jd['poiId'])
+            try:
+                resp = requests.get(storeUrl, headers=header, proxies=proxies1, timeout=15)
+                pattern = re.compile('"phone":"(.*?)"', re.S)
+                phone = re.findall(pattern, resp.text)[0]
+                storeData.update({'phone': phone})
+                openInfo = re.findall('"openInfo":"(.*?)"', resp.text, re.S)[0]
+                storeData['opentime'] = openInfo.replace(r'\n', ' ')
+                self.save_to_mongo(storeData)
+            except Exception as e:
+                print("代理错误" + str(e))
+            time.sleep(0.5)
+
+    '''
+    def save_to_mysql(self, data):
+        sql = "INSERT INTO DATA(poiId,title,address,phone,opentime,avgScore,allCommentNum,avgPrice,frontImg) VALUES({},{},{},{},{},{},{},{},{});".format(
+        data['poiId'], data['title'], data['address'], data['phone'], data['opentime'].strip(), data['avgScore'], data['allCommentNum'],
+        data['avgPrice'], data['frontImg'])
+        try:
+            print(sql)
+            self.cur.execute(sql)
+        except Exception as e:
+            print(e)
+       
+        try:
+            df = pd.DataFrame(data, index=[0])
+            df.to_sql(name='data', con=self.connect, if_exists='append', index=False)
+            print("插入成功", data)
+        except Exception as e:
+            print("insert filed", e)
+     '''
+
+    def save_to_mongo(self, data):
+        if data:
+            global k
+            try:
+                k = 1
+                for i in self.col.find({}):
+                    if data['poiId'] == i['poiId']:
+                        k = 2
+                        break
+                if k == 1:
+                    self.col.insert(data)
+                    print(str(data) + "insert sucess!")
+            except Exception as e:
+                print("保存失败" + str(e))
+
+    def __del__(self):
+        self.mongo_uri.close()
+
+
+if __name__ == '__main__':
+    #test
+    header = {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Encoding': 'gzip, deflate',
+        'Host': 'meishi.meituan.com',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.75 Safari/537.36',
+        'Accept-Language': 'zh-CN,zh;q=0.9',
+        'Cookie': '_lxsdk_cuid=16a6d0a91f4c8-0bb7a7e6cf4c33-7a1b34-1fa400-16a6d0a91f4c8; iuuid=22C823AF920B98A6731899F34E4A09E176C7BEF27B4DA8E0E9CE68AA8CE4068B; _lxsdk=22C823AF920B98A6731899F34E4A09E176C7BEF27B4DA8E0E9CE68AA8CE4068B; _hc.v=e01b9012-0638-a72a-24ef-520f55263d54.1557909552; __utmz=74597006.1558102696.13.5.utmcsr=google|utmccn=(organic)|utmcmd=organic|utmctr=(not%20provided); __utma=74597006.430058307.1557909451.1558165332.1558598539.15; latlng=29.419889,106.313393,1558598538615; cityname=%E9%87%8D%E5%BA%86; i_extend=C_b1Gimthomepagecategory11H__a; _lx_utm=utm_source%3Dgoogle%26utm_medium%3Dorganic; __mta=145044363.1558084997503.1558084997503.1558918099794.2; ci=45; rvct=45%2C59; client-id=376299e0-20b7-499e-a7dd-2148e3bcc10a; uuid=e0c8859981424d089d25.1558959130.1.0.0; lat=29.712536; lng=106.600873; _lxsdk_s=16af99ea3cf-72-6f8-888%7C%7C1',
+        'Upgrade-Insecure-Requests': '1'
+
+    }
+    res = requests.get('http://www.meituan.com/meishi/183984781/', headers=header, proxies=proxies1)
+    print(res.text)
