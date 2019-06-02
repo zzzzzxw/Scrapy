@@ -1,0 +1,135 @@
+# -*-coding: utf-8 -*-
+# !/usr/bin/env python3.6
+"""
+__time__   = '2019/5/18 15:45'
+__file__ = test2.py
+__author__ = 'Zzz'
+"""
+import datetime
+import json
+import random
+import re
+import struct
+import time
+from urllib.parse import urlencode
+import requests
+import base64
+import zlib
+
+# ip代理接口获取免费代理，框架自己google一下，然后运行在本地
+# proxy = requests.get('http://localhost:port/get/').text
+# proxies = dict(http="http://{}".format(proxy), https="https://{}".format(proxy))
+from MeiTuan import pares
+
+# ip代理设置
+proxies1 = {'http': 'http://username:password@ip:port',
+            'https': 'https://username:password@ip:port'}
+
+class login_mt(object):
+    def __init__(self, headers, uuid, areaId):
+        self.headers = headers
+        self.uuid = uuid
+        self.areaId = areaId
+
+    def d_token(self, o_token):
+        zlib_t = base64.b64decode(o_token.encode())
+        tt = zlib.decompress(zlib_t)
+        return tt
+
+    def e_token(self, t_token):
+        t = zlib.compress(t_token.encode())
+        tt = base64.b64encode(t)
+        return tt.decode()
+
+    def getTime(self):
+        '''
+        d1 = datetime.datetime(1970, 1, 1)
+        d2 = datetime.datetime.now()
+        d3 = int((d2 - d1).total_seconds() * 1000)
+        '''
+        ts = int(time.time() * 1000)
+        return ts
+
+    def g_sign(self, pg):
+        sign = 'areaId={}&cateId=0&cityName=重庆&dinnerCountAttrId=&optimusCode=1&originUrl=https://cq.meituan.com/meishi/&page={}&partner=126&platform=1&riskLevel=1&sort=&userId=&uuid={}'.format(
+            self.areaId, pg, self.uuid)
+        d_sign = self.e_token(str(sign))
+        return d_sign
+
+    def post_data(self):
+        for i in range(68, 1000):
+            _token = {
+                "rId": 100900,
+                "ts": self.getTime(),
+                "cts": self.getTime() + random.randint(100, 120),
+                "brVD": [1688, 192],
+                "brR": [[1920, 1080], [1920, 1040], 24, 24],
+                "bI": ["https://cq.meituan.com/meishi/", ""],
+                "mT": [],
+                "kT": [],
+                "aT": [],
+                "tT": [],
+                "aM": "",
+                "sign": self.g_sign(i)
+            }
+            params1 = {
+                'cityName': '重庆',
+                'cateId': 0,
+                'areaId': self.areaId,
+                'sort': "",
+                'dinnerCountAttrId': '',
+                'page': i,
+                'userId': '',
+                'uuid': self.uuid,
+                'platform': 1,
+                'partner': 126,
+                'originUrl': 'https://cq.meituan.com/meishi/',
+                'riskLevel': 1,
+                'optimusCode': 1,
+                '_token': self.e_token(str(_token))
+                # '_token': 'eJx9T01vgkAQ%2FS97lbi7fMvNKFYsaEGQYtMDIriAbIFFUZv%2B966JHnppMpP35s3Ly8w3aK09MDBCI4QEcE5bYAA8REMVCKBjfKMo%2BkhEGhIlRRZA8leTFSyAXbuZAuMDq7ouyDL%2BvCseFz4wNwkY6ehTeHKZc1HmdXdZ3ARI19XMgDBphlWad6eYDpOvCnLOSA5rKkJ%2Byf8mwMMqn4dxLB8YP7B7zg5%2FjCex%2FEA5Sxf9sfC71fhmBl6WrvsmgI5S9oeBO6mjxlTt1zGB2KKFPYimesGimcvWc9HVzRNb2A098R6jgFgrKSzI4Tx%2Buyg9M7v5KJM0HW4GZu3lNw1PLOhss4G5Lm9ks5OusYMtEqiBfw3xVt0mEg6urWQfHHf5Rd26cTTsT9q5G5XOQvOmVLf3MRN7UypnWcmO%2B1lIUkpfprjXMPaj%2FLi7HKvr8vz2Hvf%2BZAWr%2BYU54b5Ss%2FdgW9cVSW6qGIZe1dRLOOpFs6Dg5xfFspiH'
+            }
+            # params = self.sign + str(self.e_token(bytes(str(_token), encoding='utf-8')))
+            print(params1)
+            url = 'http://cq.meituan.com/meishi/api/poi/getPoiList?'
+            get_url = url + urlencode(params1)
+            json_data = requests.get(get_url, headers=self.headers,proxies=proxies1)
+            data = json.loads(json_data.text)
+            yield data['data']['poiInfos']
+            time.sleep(0.5)
+
+
+def g_uuid(headers):
+    url = 'http://cq.meituan.com/'
+    reps = requests.get(url, headers=headers,proxies=proxies1, timeout=6)
+    if reps.status_code == 200:
+        uuid = reps.cookies['uuid']
+        ntime = int(datetime.datetime.now().timestamp())
+        return uuid
+
+
+def main():
+    url = 'http://cq.meituan.com/meishi/api/poi/getPoiList'
+
+    headers = {'Accept-Encoding': 'gzip, deflate',
+               'Host': 'cq.meituan.com',
+               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.75 Safari/537.36',
+               'Accept': 'application/json',
+               'Accept-Language': 'zh-CN,zh;q=0.9',
+               "Referer": "https://cq.meituan.com/",
+               # 'x-requested-with': 'XMLHttpRequest',
+               # 'Origin': 'https://meishi.meituan.com',
+               # 'cookies': '__mta:247207867.1558101689872.1558101689872.1558101689872.1; client-id=5c17f1b4-5c04-47e1-9340-cdf376258308; IJSESSIONID=1840li8hx68wbfb8uw3lzdwnh; iuuid=89836A535A70CEBE15F06F9BC4F5E471F10A56A444DFB3C69073FC03B03E7BBC; ci=30; cityname=%E6%B7%B1%E5%9C%B3; latlng=; webp=1; _lxsdk_cuid=16ac618f46cc8-0670d9ba630bf4-7a1437-1fa400-16ac618f46cc8; _lxsdk=89836A535A70CEBE15F06F9BC4F5E471F10A56A444DFB3C69073FC03B03E7BBC; __utma=74597006.846890954.1558101686.1558101686.1558101686.1; __utmc=74597006; __utmz=74597006.1558101686.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); __utmb=74597006.1.10.1558101686; i_extend=H__a100001__b1; uuid=67cb1486-24bd-439d-892f-2d6d3d4e3284; _hc.v=0173b347-8ee5-5b4f-dbfa-e87e0265e8f2.1558101689; _lxsdk_s=16ac618f46d-d57-3a2-4cd%7C%7C4'
+               }
+    uuid = g_uuid(headers)
+    areaId = [0, 41, 46, 45, 44, 4580]
+    for a in areaId[0:1]:
+        mt = login_mt(headers, uuid, a)
+        for data in mt.post_data():
+            print(data)
+            pares.Pares(data).pares_json()
+
+
+
+if __name__ == '__main__':
+    main()
